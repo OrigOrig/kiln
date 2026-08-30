@@ -1,0 +1,859 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kiln — process your own media</title>
+<meta name="description" content="Transcode, extract audio, and remux files you own — entirely in your browser.">
+<style>
+  :root{
+    --bg: #16130f;
+    --bg-raised: #1e1a15;
+    --bg-inset: #100e0b;
+    --border: #33291d;
+    --border-soft: #241f18;
+    --text: #f2ead9;
+    --text-dim: #a89a82;
+    --text-faint: #6e6353;
+    --ember: #e07a3f;
+    --ember-bright: #ff9752;
+    --ember-dim: #7a3f22;
+    --ok: #7ea672;
+    --err: #d16a5a;
+    --radius: 10px;
+    --mono: 'JetBrains Mono', ui-monospace, 'SF Mono', Consolas, monospace;
+    --serif: 'Fraunces', Georgia, serif;
+    --sans: 'Inter', -apple-system, sans-serif;
+    --motion: 1;
+  }
+  [data-theme="light"]{
+    --bg: #f3ede0;
+    --bg-raised: #fbf7ee;
+    --bg-inset: #e9e1d0;
+    --border: #d8cbb0;
+    --border-soft: #e3d8c1;
+    --text: #241d12;
+    --text-dim: #6b5f48;
+    --text-faint: #a0937a;
+    --ember-dim: #f0c9a8;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  html{color-scheme: dark;}
+  [data-theme="light"] html{color-scheme: light;}
+  body{
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    min-height:100vh;
+    background-image:
+      radial-gradient(ellipse 900px 500px at 50% -10%, var(--ember-dim) 0%, transparent 60%);
+    background-repeat:no-repeat;
+  }
+  @media (prefers-reduced-motion: reduce){ :root{ --motion: 0; } }
+  *{ transition: background-color .2s ease, border-color .2s ease, color .2s ease, opacity .2s ease, transform .2s ease; }
+
+  a{color:inherit}
+
+  .wrap{ max-width: 720px; margin: 0 auto; padding: 28px 20px 80px; }
+
+  /* Header */
+  header{ display:flex; align-items:center; justify-content:space-between; padding: 10px 4px 40px; }
+  .brand{ display:flex; align-items:center; gap:10px; }
+  .brand-mark{
+    width:34px; height:34px; border-radius:8px;
+    background: linear-gradient(155deg, var(--ember-bright), var(--ember-dim));
+    display:flex; align-items:center; justify-content:center;
+    font-family:var(--serif); font-weight:600; font-size:18px; color:#1a1108;
+    box-shadow: 0 0 0 1px var(--border), 0 4px 14px -6px var(--ember);
+  }
+  .brand-name{ font-family: var(--serif); font-size: 21px; font-weight:600; letter-spacing:-.01em; }
+  .brand-tag{ font-family: var(--mono); font-size:10px; color: var(--text-faint); letter-spacing:.06em; text-transform:uppercase; margin-top:1px;}
+  .header-actions{ display:flex; gap:8px; }
+  .icon-btn{
+    width:36px; height:36px; border-radius:8px; border:1px solid var(--border);
+    background: var(--bg-raised); color: var(--text-dim); display:flex; align-items:center; justify-content:center;
+    cursor:pointer; font-size:15px;
+  }
+  .icon-btn:hover{ color:var(--text); border-color: var(--ember-dim); }
+
+  /* Hero */
+  .hero{ text-align:center; padding: 10px 0 34px; }
+  .hero h1{ font-family: var(--serif); font-size: clamp(30px, 6vw, 44px); font-weight: 600; letter-spacing:-.02em; line-height:1.08; }
+  .hero h1 em{ font-style:normal; color: var(--ember-bright); }
+  .hero p{ color: var(--text-dim); margin-top:12px; font-size:15px; max-width: 460px; margin-inline:auto; }
+
+  /* Mode switch */
+  .mode-row{ display:flex; justify-content:center; gap:6px; margin-bottom:18px; }
+  .mode-btn{
+    font-family: var(--mono); font-size:12.5px; letter-spacing:.02em;
+    padding:8px 16px; border-radius: 999px; border:1px solid var(--border);
+    background: var(--bg-raised); color: var(--text-dim); cursor:pointer;
+  }
+  .mode-btn.active{ background: var(--ember); border-color: var(--ember); color:#1a1108; font-weight:600; }
+
+  /* Input card */
+  .drop-card{
+    background: var(--bg-raised); border:1px solid var(--border); border-radius: var(--radius);
+    padding: 22px; margin-bottom:14px;
+  }
+  .tab-row{ display:flex; gap:4px; background: var(--bg-inset); padding:4px; border-radius:8px; margin-bottom:16px; }
+  .tab-btn{
+    flex:1; border:none; background:transparent; color:var(--text-faint); font-family: var(--mono); font-size:12px;
+    padding:8px 6px; border-radius:6px; cursor:pointer; letter-spacing:.02em;
+  }
+  .tab-btn.active{ background: var(--bg-raised); color: var(--text); box-shadow: 0 0 0 1px var(--border); }
+
+  .dropzone{
+    border: 1.5px dashed var(--border); border-radius:8px; padding: 30px 16px;
+    text-align:center; cursor:pointer; background: var(--bg-inset);
+  }
+  .dropzone.drag{ border-color: var(--ember); background: rgba(224,122,63,.08); }
+  .dropzone .dz-icon{ font-size:26px; margin-bottom:8px; opacity:.8;}
+  .dropzone .dz-title{ font-size:14px; color:var(--text); font-weight:600; }
+  .dropzone .dz-sub{ font-size:12.5px; color:var(--text-faint); margin-top:4px; }
+  .dropzone input{ display:none; }
+  .file-chip{
+    display:flex; align-items:center; gap:10px; background: var(--bg-inset); border:1px solid var(--border);
+    border-radius:8px; padding:10px 12px; font-size:13px;
+  }
+  .file-chip .fc-name{ flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-family:var(--mono); font-size:12.5px;}
+  .file-chip .fc-size{ color:var(--text-faint); font-size:11.5px; }
+  .file-chip .fc-remove{ background:none; border:none; color:var(--text-faint); cursor:pointer; font-size:15px; padding:2px 4px; }
+
+  .url-row{ display:flex; gap:8px; }
+  .url-row input{
+    flex:1; background: var(--bg-inset); border:1px solid var(--border); border-radius:8px;
+    padding: 12px 14px; color: var(--text); font-family: var(--mono); font-size:13px; outline:none;
+  }
+  .url-row input:focus{ border-color: var(--ember); }
+  .url-row input::placeholder{ color: var(--text-faint); }
+  .hint{ font-size:11.5px; color:var(--text-faint); margin-top:8px; line-height:1.5;}
+
+  .opts-row{ display:flex; gap:10px; margin-top:16px; flex-wrap:wrap; }
+  .opt{ flex:1; min-width:130px; }
+  .opt label{ display:block; font-family:var(--mono); font-size:10.5px; text-transform:uppercase; letter-spacing:.06em; color:var(--text-faint); margin-bottom:6px;}
+  .opt select{
+    width:100%; background: var(--bg-inset); border:1px solid var(--border); border-radius:7px;
+    padding:9px 10px; color:var(--text); font-size:13px; font-family:var(--sans); outline:none; cursor:pointer;
+  }
+  .opt select:focus{ border-color: var(--ember); }
+
+  .go-btn{
+    width:100%; margin-top:18px; padding:14px; border-radius:8px; border:none;
+    background: linear-gradient(155deg, var(--ember-bright), var(--ember)); color:#1a1108;
+    font-weight:700; font-size:14.5px; letter-spacing:.01em; cursor:pointer;
+    box-shadow: 0 6px 20px -8px var(--ember);
+  }
+  .go-btn:disabled{ opacity:.4; cursor:not-allowed; box-shadow:none; }
+  .go-btn:not(:disabled):hover{ filter:brightness(1.06); }
+
+  /* Processing state */
+  .proc-card{ text-align:center; padding: 34px 22px; }
+  .proc-ring{
+    width:56px; height:56px; margin:0 auto 18px; border-radius:50%;
+    border: 3px solid var(--border-soft); border-top-color: var(--ember);
+    animation: spin 1s linear infinite;
+  }
+  @keyframes spin{ to{ transform:rotate(360deg); } }
+  [style*="--motion: 0"] .proc-ring, :root[data-reduced="1"] .proc-ring{ animation: none; border-top-color:var(--ember);}
+  .proc-status{ font-family: var(--mono); font-size:13px; color: var(--text-dim); min-height:18px; }
+  .proc-bar{ height:5px; border-radius:3px; background: var(--bg-inset); margin-top:16px; overflow:hidden; }
+  .proc-bar-fill{ height:100%; background: linear-gradient(90deg, var(--ember), var(--ember-bright)); width:6%; transition: width .3s ease; }
+  .proc-cancel{ margin-top:18px; background:none; border:1px solid var(--border); color:var(--text-dim); padding:8px 16px; border-radius:7px; cursor:pointer; font-size:12.5px; }
+
+  /* Success */
+  .ok-card{ padding: 26px; }
+  .ok-head{ display:flex; align-items:center; gap:10px; margin-bottom:16px; }
+  .ok-badge{ width:30px; height:30px; border-radius:50%; background: rgba(126,166,114,.15); color: var(--ok); display:flex; align-items:center; justify-content:center; font-size:15px; }
+  .ok-title{ font-weight:600; font-size:15px; }
+  .result-item{
+    display:flex; align-items:center; gap:12px; padding:12px; border:1px solid var(--border);
+    border-radius:8px; background: var(--bg-inset); margin-bottom:8px;
+  }
+  .result-item .ri-thumb{ width:40px; height:40px; border-radius:6px; background: var(--bg-raised); display:flex; align-items:center; justify-content:center; font-size:16px; flex-shrink:0; }
+  .result-item .ri-meta{ flex:1; min-width:0; }
+  .result-item .ri-name{ font-size:13px; font-family:var(--mono); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .result-item .ri-sub{ font-size:11.5px; color:var(--text-faint); margin-top:2px; }
+  .result-item .ri-dl{ background: var(--ember); color:#1a1108; border:none; border-radius:6px; padding:7px 12px; font-size:12px; font-weight:700; cursor:pointer; flex-shrink:0; text-decoration:none; }
+  .reset-link{ display:block; text-align:center; margin-top:16px; color:var(--text-faint); font-size:12.5px; cursor:pointer; background:none; border:none; width:100%; }
+  .reset-link:hover{ color: var(--text); }
+
+  /* Toast */
+  .toast{
+    position:fixed; bottom:22px; left:50%; transform:translateX(-50%) translateY(0);
+    background: var(--bg-raised); border:1px solid var(--err); border-left-width:3px;
+    border-radius:8px; padding:12px 16px; display:flex; align-items:center; gap:10px;
+    box-shadow: 0 10px 30px -10px rgba(0,0,0,.5); max-width: 90vw; z-index:50;
+  }
+  .toast .t-icon{ color: var(--err); font-size:15px; }
+  .toast .t-text{ font-size:13px; }
+  .toast .t-text b{ display:block; font-size:12.5px; margin-bottom:2px; }
+  .toast .t-close{ background:none; border:none; color:var(--text-faint); cursor:pointer; font-size:15px; margin-left:6px; }
+
+  footer{ text-align:center; margin-top: 40px; color: var(--text-faint); font-size:11.5px; font-family:var(--mono); }
+
+  /* Settings modal */
+  .modal-backdrop{
+    position:fixed; inset:0; background: rgba(0,0,0,.55); display:flex; align-items:center; justify-content:center;
+    padding:20px; z-index:100;
+  }
+  .modal{
+    background: var(--bg-raised); border:1px solid var(--border); border-radius:14px; width:100%; max-width: 440px;
+    max-height: 86vh; overflow-y:auto; padding:22px;
+  }
+  .modal h2{ font-family:var(--serif); font-size:19px; font-weight:600; margin-bottom:4px; }
+  .modal .modal-sub{ font-size:12px; color:var(--text-faint); margin-bottom:18px; }
+  .field{ margin-bottom:16px; }
+  .field label{ display:block; font-family:var(--mono); font-size:10.5px; text-transform:uppercase; letter-spacing:.06em; color:var(--text-faint); margin-bottom:7px; }
+  .field select, .field input[type=text]{
+    width:100%; background: var(--bg-inset); border:1px solid var(--border); border-radius:7px;
+    padding:9px 10px; color:var(--text); font-size:13px; outline:none;
+  }
+  .field .field-note{ font-size:11px; color:var(--text-faint); margin-top:6px; line-height:1.5; }
+  .swatches{ display:flex; gap:8px; }
+  .swatch{ width:28px; height:28px; border-radius:50%; cursor:pointer; border:2px solid transparent; }
+  .swatch.selected{ border-color: var(--text); }
+  .toggle-row{ display:flex; align-items:center; justify-content:space-between; padding:10px 0; border-top:1px solid var(--border-soft); }
+  .toggle-row:first-of-type{ border-top:none; }
+  .toggle-row .tr-label{ font-size:13px; }
+  .toggle-row .tr-note{ font-size:11px; color:var(--text-faint); margin-top:2px; }
+  .switch{ position:relative; width:38px; height:22px; flex-shrink:0; }
+  .switch input{ opacity:0; width:0; height:0; }
+  .slider{ position:absolute; inset:0; background: var(--bg-inset); border:1px solid var(--border); border-radius:999px; cursor:pointer; }
+  .slider::before{ content:''; position:absolute; width:16px; height:16px; left:2px; top:2px; background: var(--text-faint); border-radius:50%; }
+  input:checked + .slider{ background: var(--ember-dim); border-color: var(--ember); }
+  input:checked + .slider::before{ transform:translateX(16px); background: var(--ember-bright); }
+  .modal-actions{ display:flex; gap:10px; margin-top:20px; }
+  .btn-secondary{ flex:1; padding:11px; border-radius:8px; border:1px solid var(--border); background:transparent; color:var(--text-dim); cursor:pointer; font-size:13px; }
+  .btn-primary{ flex:1; padding:11px; border-radius:8px; border:none; background: var(--ember); color:#1a1108; font-weight:700; cursor:pointer; font-size:13px; }
+  .modal-close{ float:right; background:none; border:none; color:var(--text-faint); font-size:18px; cursor:pointer; }
+  .privacy-note{
+    background: var(--bg-inset); border:1px solid var(--border-soft); border-radius:8px; padding:10px 12px;
+    font-size:11.5px; color: var(--text-dim); line-height:1.6; margin-top:4px;
+  }
+
+  .sr-only{ position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0,0,0,0); }
+  :focus-visible{ outline: 2px solid var(--ember-bright); outline-offset:2px; }
+
+  @media (max-width:480px){
+    .opts-row{ flex-direction:column; }
+    .header-actions .icon-btn:not(#settingsBtn){ display:none; }
+  }
+</style>
+</head>
+<body data-theme="dark">
+<div class="wrap">
+
+  <header>
+    <div class="brand">
+      <div class="brand-mark">K</div>
+      <div>
+        <div class="brand-name">Kiln</div>
+        <div class="brand-tag">your files, your machine</div>
+      </div>
+    </div>
+    <div class="header-actions">
+      <button class="icon-btn" id="settingsBtn" title="Settings" aria-label="Open settings">⚙</button>
+    </div>
+  </header>
+
+  <div class="hero">
+    <h1>Process what's <em>yours.</em></h1>
+    <p>Upload a file, or point Kiln at media you already host. Transcoding and audio extraction happen right in your browser — nothing is stored on a server.</p>
+  </div>
+
+  <div class="mode-row">
+    <button class="mode-btn active" data-mode="video">▶ Video</button>
+    <button class="mode-btn" data-mode="audio">♫ Audio only</button>
+  </div>
+
+  <!-- INPUT / IDLE STATE -->
+  <div class="drop-card" id="idleCard">
+    <div class="tab-row">
+      <button class="tab-btn active" data-tab="upload">Upload file</button>
+      <button class="tab-btn" data-tab="url">Your own URL</button>
+    </div>
+
+    <div id="uploadPane">
+      <div class="dropzone" id="dropzone" tabindex="0" role="button" aria-label="Choose a file to upload">
+        <div class="dz-icon">⤒</div>
+        <div class="dz-title">Drop a file, or click to browse</div>
+        <div class="dz-sub">Runs locally via ffmpeg.wasm — up to ~2GB in most browsers</div>
+        <input type="file" id="fileInput" accept="video/*,audio/*,image/*">
+      </div>
+      <div id="fileChipHolder" style="margin-top:10px;"></div>
+    </div>
+
+    <div id="urlPane" style="display:none;">
+      <div class="url-row">
+        <input type="text" id="urlInput" placeholder="https://your-bucket.r2.dev/clip.mp4">
+      </div>
+      <div class="hint">Kiln only fetches from URLs you provide — for files you host yourself (R2, S3, your CDN, etc). It doesn't parse or scrape third-party platform links.</div>
+    </div>
+
+    <div class="opts-row" id="videoOpts">
+      <div class="opt">
+        <label>Quality</label>
+        <select id="qualitySel">
+          <option value="source">Source / no re-encode</option>
+          <option value="2160">2160p (4K)</option>
+          <option value="1440">1440p</option>
+          <option value="1080" selected>1080p</option>
+          <option value="720">720p</option>
+          <option value="480">480p</option>
+        </select>
+      </div>
+      <div class="opt">
+        <label>Container</label>
+        <select id="containerSel">
+          <option value="mp4">MP4 (H.264)</option>
+          <option value="webm">WebM (VP9)</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="opts-row" id="audioOpts" style="display:none;">
+      <div class="opt">
+        <label>Format</label>
+        <select id="audioFmtSel">
+          <option value="mp3" selected>MP3</option>
+          <option value="aac">AAC</option>
+          <option value="opus">OPUS</option>
+          <option value="ogg">OGG</option>
+          <option value="wav">WAV</option>
+          <option value="flac">FLAC</option>
+        </select>
+      </div>
+      <div class="opt">
+        <label>Bitrate</label>
+        <select id="bitrateSel">
+          <option value="128">128 kbps</option>
+          <option value="192">192 kbps</option>
+          <option value="320" selected>320 kbps</option>
+        </select>
+      </div>
+    </div>
+
+    <button class="go-btn" id="goBtn" disabled>Process file</button>
+  </div>
+
+  <!-- PROCESSING STATE -->
+  <div class="drop-card proc-card" id="procCard" style="display:none;">
+    <div class="proc-ring"></div>
+    <div class="proc-status" id="procStatus">Loading engine…</div>
+    <div class="proc-bar"><div class="proc-bar-fill" id="procBarFill"></div></div>
+    <button class="proc-cancel" id="cancelBtn">Cancel</button>
+  </div>
+
+  <!-- SUCCESS STATE -->
+  <div class="drop-card ok-card" id="okCard" style="display:none;">
+    <div class="ok-head">
+      <div class="ok-badge">✓</div>
+      <div class="ok-title">Ready</div>
+    </div>
+    <div id="resultsHolder"></div>
+    <button class="reset-link" id="resetBtn">Process another file</button>
+  </div>
+
+  <footer>no logs · no analytics · nothing leaves your browser unless you ask it to</footer>
+</div>
+
+<div id="toastHolder"></div>
+
+<!-- SETTINGS MODAL -->
+<div class="modal-backdrop" id="settingsModal" style="display:none;">
+  <div class="modal">
+    <button class="modal-close" id="modalClose" aria-label="Close settings">✕</button>
+    <h2>Preferences</h2>
+    <div class="modal-sub">Stored only in this browser (localStorage). Never sent anywhere.</div>
+
+    <div class="field">
+      <label>Theme</label>
+      <select id="themeSel">
+        <option value="dark">Dark</option>
+        <option value="light">Light</option>
+        <option value="system">Match system</option>
+      </select>
+    </div>
+
+    <div class="field">
+      <label>Accent color</label>
+      <div class="swatches" id="swatches">
+        <div class="swatch selected" data-c="#e07a3f" style="background:#e07a3f"></div>
+        <div class="swatch" data-c="#4f9d69" style="background:#4f9d69"></div>
+        <div class="swatch" data-c="#4a86c5" style="background:#4a86c5"></div>
+        <div class="swatch" data-c="#b25fc9" style="background:#b25fc9"></div>
+        <div class="swatch" data-c="#c9515b" style="background:#c9515b"></div>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Default video quality</label>
+      <select id="defQuality">
+        <option value="1080" selected>1080p</option>
+        <option value="720">720p</option>
+        <option value="480">480p</option>
+        <option value="source">Source</option>
+      </select>
+    </div>
+
+    <div class="field">
+      <label>Default audio format</label>
+      <select id="defAudio">
+        <option value="mp3" selected>MP3</option>
+        <option value="opus">OPUS</option>
+        <option value="wav">WAV</option>
+      </select>
+    </div>
+
+    <div class="toggle-row">
+      <div>
+        <div class="tr-label">Embed metadata</div>
+        <div class="tr-note">Title / cover art / tags into output files</div>
+      </div>
+      <label class="switch"><input type="checkbox" id="metaToggle" checked><span class="slider"></span></label>
+    </div>
+    <div class="toggle-row">
+      <div>
+        <div class="tr-label">Reduced motion</div>
+        <div class="tr-note">Turns off the spinner animation</div>
+      </div>
+      <label class="switch"><input type="checkbox" id="motionToggle"><span class="slider"></span></label>
+    </div>
+    <div class="toggle-row">
+      <div>
+        <div class="tr-label">Allow server fallback</div>
+        <div class="tr-note">For files too large/slow for this browser</div>
+      </div>
+      <label class="switch"><input type="checkbox" id="fallbackToggle" checked><span class="slider"></span></label>
+    </div>
+
+    <div class="field" style="margin-top:16px;">
+      <label>Processing endpoint (optional override)</label>
+      <input type="text" id="workerUrl" placeholder="Leave blank to use this same site's /process route">
+      <div class="field-note">By default, heavy jobs are sent to this same site's own /process route (see worker.js). Only set this if you're routing to a different deployment. Note: your own real transcoding backend (BACKEND_URL) still needs to be configured separately — see README.</div>
+    </div>
+
+    <div class="privacy-note">
+      Kiln keeps no server logs, no analytics, and no IP/user-agent history by design — see worker.js. Client-side jobs never touch a network at all.
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn-secondary" id="modalCancel">Close</button>
+      <button class="btn-primary" id="modalSave">Save</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/ffmpeg/0.12.10/umd/ffmpeg.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/ffmpeg-util/0.12.1/umd/index.min.js"></script>
+<script>
+(function(){
+  'use strict';
+
+  /* ---------- state ---------- */
+  const state = {
+    mode: 'video',        // 'video' | 'audio'
+    tab: 'upload',        // 'upload' | 'url'
+    file: null,           // File object
+    url: '',
+    prefs: loadPrefs(),
+  };
+
+  const els = {
+    idleCard: document.getElementById('idleCard'),
+    procCard: document.getElementById('procCard'),
+    okCard: document.getElementById('okCard'),
+    procStatus: document.getElementById('procStatus'),
+    procBarFill: document.getElementById('procBarFill'),
+    goBtn: document.getElementById('goBtn'),
+    dropzone: document.getElementById('dropzone'),
+    fileInput: document.getElementById('fileInput'),
+    fileChipHolder: document.getElementById('fileChipHolder'),
+    urlInput: document.getElementById('urlInput'),
+    uploadPane: document.getElementById('uploadPane'),
+    urlPane: document.getElementById('urlPane'),
+    videoOpts: document.getElementById('videoOpts'),
+    audioOpts: document.getElementById('audioOpts'),
+    resultsHolder: document.getElementById('resultsHolder'),
+    toastHolder: document.getElementById('toastHolder'),
+  };
+
+  /* ---------- prefs ---------- */
+  function loadPrefs(){
+    try{
+      const raw = localStorage.getItem('kiln-prefs');
+      if(raw) return Object.assign(defaultPrefs(), JSON.parse(raw));
+    }catch(e){}
+    return defaultPrefs();
+  }
+  function defaultPrefs(){
+    return {
+      theme:'dark', accent:'#e07a3f', defQuality:'1080', defAudio:'mp3',
+      embedMeta:true, reducedMotion:false, allowFallback:true, workerUrl:''
+    };
+  }
+  function savePrefs(){ localStorage.setItem('kiln-prefs', JSON.stringify(state.prefs)); }
+  function applyPrefs(){
+    const p = state.prefs;
+    let theme = p.theme;
+    if(theme === 'system'){
+      theme = window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+    }
+    document.body.setAttribute('data-theme', theme);
+    document.documentElement.style.setProperty('--ember', p.accent);
+    document.documentElement.style.setProperty('--ember-bright', shade(p.accent, 25));
+    document.documentElement.style.setProperty('--ember-dim', shade(p.accent, -35));
+    document.documentElement.setAttribute('data-reduced', p.reducedMotion ? '1':'0');
+    document.getElementById('qualitySel').value = p.defQuality;
+    document.getElementById('audioFmtSel').value = p.defAudio;
+  }
+  function shade(hex, pct){
+    const n = parseInt(hex.slice(1),16);
+    let r=(n>>16)+Math.round(255*pct/100), g=((n>>8)&255)+Math.round(255*pct/100), b=(n&255)+Math.round(255*pct/100);
+    r=Math.max(0,Math.min(255,r)); g=Math.max(0,Math.min(255,g)); b=Math.max(0,Math.min(255,b));
+    return '#'+(1<<24 | r<<16 | g<<8 | b).toString(16).slice(1);
+  }
+  applyPrefs();
+
+  /* ---------- mode / tab switching ---------- */
+  document.querySelectorAll('.mode-btn').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      document.querySelectorAll('.mode-btn').forEach(b=>b.classList.remove('active'));
+      btn.classList.add('active');
+      state.mode = btn.dataset.mode;
+      els.videoOpts.style.display = state.mode==='video' ? 'flex':'none';
+      els.audioOpts.style.display = state.mode==='audio' ? 'flex':'none';
+      updateGoBtn();
+    });
+  });
+
+  document.querySelectorAll('.tab-btn').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+      btn.classList.add('active');
+      state.tab = btn.dataset.tab;
+      els.uploadPane.style.display = state.tab==='upload' ? 'block':'none';
+      els.urlPane.style.display = state.tab==='url' ? 'block':'none';
+      updateGoBtn();
+    });
+  });
+
+  /* ---------- file input / dropzone ---------- */
+  els.dropzone.addEventListener('click', ()=> els.fileInput.click());
+  els.dropzone.addEventListener('keydown', e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); els.fileInput.click(); }});
+  els.fileInput.addEventListener('change', e=>{
+    if(e.target.files[0]) setFile(e.target.files[0]);
+  });
+  ['dragover','dragenter'].forEach(ev=> els.dropzone.addEventListener(ev, e=>{
+    e.preventDefault(); els.dropzone.classList.add('drag');
+  }));
+  ['dragleave','drop'].forEach(ev=> els.dropzone.addEventListener(ev, e=>{
+    e.preventDefault(); els.dropzone.classList.remove('drag');
+  }));
+  els.dropzone.addEventListener('drop', e=>{
+    if(e.dataTransfer.files[0]) setFile(e.dataTransfer.files[0]);
+  });
+
+  function setFile(file){
+    state.file = file;
+    els.fileChipHolder.innerHTML = '';
+    const chip = document.createElement('div');
+    chip.className = 'file-chip';
+    chip.innerHTML = `
+      <span>📄</span>
+      <span class="fc-name">${escapeHtml(file.name)}</span>
+      <span class="fc-size">${fmtBytes(file.size)}</span>
+      <button class="fc-remove" aria-label="Remove file">✕</button>
+    `;
+    chip.querySelector('.fc-remove').addEventListener('click', ()=>{
+      state.file = null; els.fileChipHolder.innerHTML=''; els.fileInput.value=''; updateGoBtn();
+    });
+    els.fileChipHolder.appendChild(chip);
+    updateGoBtn();
+  }
+
+  els.urlInput.addEventListener('input', ()=>{ state.url = els.urlInput.value.trim(); updateGoBtn(); });
+
+  function updateGoBtn(){
+    const ready = state.tab==='upload' ? !!state.file : isLikelyUrl(state.url);
+    els.goBtn.disabled = !ready;
+  }
+  function isLikelyUrl(u){ return /^https?:\/\/.+/i.test(u); }
+
+  /* ---------- ffmpeg engine ---------- */
+  let ffmpeg = null;
+  let ffmpegLoaded = false;
+  let cancelled = false;
+
+  async function ensureEngine(onProgress){
+    if(ffmpegLoaded) return;
+    onProgress('Loading engine…', 4);
+    const { FFmpeg } = window.FFmpegWASM || {};
+    if(!FFmpeg) throw new Error('ENGINE_UNAVAILABLE');
+    ffmpeg = new FFmpeg();
+    ffmpeg.on('progress', ({progress}) => {
+      if(progress && progress>0 && progress<=1){
+        setProgress(10 + Math.round(progress*80));
+      }
+    });
+    const base = 'https://cdnjs.cloudflare.com/ajax/libs/ffmpeg-core/0.12.6/umd';
+    await ffmpeg.load({
+      coreURL: base + '/ffmpeg-core.js',
+      wasmURL: base + '/ffmpeg-core.wasm',
+    });
+    ffmpegLoaded = true;
+  }
+
+  function setStatus(text){ els.procStatus.textContent = text; }
+  function setProgress(pct){ els.procBarFill.style.width = Math.max(4,Math.min(100,pct)) + '%'; }
+
+  function extOf(name){ const m=/\.([a-z0-9]+)$/i.exec(name||''); return m? m[1].toLowerCase() : ''; }
+
+  function buildArgs(inputName, opts){
+    const args = ['-i', inputName];
+    if(opts.mode === 'audio'){
+      const outExt = opts.audioFmt;
+      const codecMap = { mp3:'libmp3lame', aac:'aac', opus:'libopus', ogg:'libvorbis', wav:'pcm_s16le', flac:'flac' };
+      args.push('-vn');
+      if(codecMap[outExt]) args.push('-c:a', codecMap[outExt]);
+      if(outExt !== 'wav' && outExt !== 'flac'){ args.push('-b:a', opts.bitrate+'k'); }
+      const out = 'output.' + outExt;
+      return { args: args.concat([out]), out };
+    } else {
+      const out = 'output.' + opts.container;
+      if(opts.quality === 'source'){
+        args.push('-c', 'copy');
+      } else {
+        const heightMap = { '2160':2160,'1440':1440,'1080':1080,'720':720,'480':480 };
+        const h = heightMap[opts.quality] || 1080;
+        args.push('-vf', `scale=-2:${h}`);
+        if(opts.container === 'webm'){ args.push('-c:v','libvpx-vp9','-b:v','0','-crf','32','-c:a','libopus'); }
+        else { args.push('-c:v','libx264','-preset','veryfast','-crf','23','-c:a','aac'); }
+      }
+      return { args: args.concat([out]), out };
+    }
+  }
+
+  async function processLocal(sourceBytes, sourceName, opts){
+    await ensureEngine(setStatus);
+    setStatus('Preparing file…'); setProgress(8);
+    const inputName = 'input.' + (extOf(sourceName) || 'bin');
+    await ffmpeg.writeFile(inputName, sourceBytes);
+
+    if(cancelled) throw new Error('CANCELLED');
+    setStatus(opts.mode==='audio' ? 'Extracting audio…' : 'Transcoding…'); setProgress(10);
+
+    const { args, out } = buildArgs(inputName, opts);
+    await ffmpeg.exec(args);
+
+    if(cancelled) throw new Error('CANCELLED');
+    setStatus('Finalizing…'); setProgress(96);
+    const data = await ffmpeg.readFile(out);
+    const mime = guessMime(out);
+    return { blob: new Blob([data.buffer], {type: mime}), name: baseName(sourceName) + '-kiln.' + extOf(out) };
+  }
+
+  function guessMime(name){
+    const ext = extOf(name);
+    const map = { mp4:'video/mp4', webm:'video/webm', mp3:'audio/mpeg', aac:'audio/aac', opus:'audio/opus', ogg:'audio/ogg', wav:'audio/wav', flac:'audio/flac' };
+    return map[ext] || 'application/octet-stream';
+  }
+  function baseName(name){ return (name||'file').replace(/\.[^/.]+$/, ''); }
+  function fmtBytes(n){
+    if(n < 1024) return n+' B';
+    if(n < 1024*1024) return (n/1024).toFixed(1)+' KB';
+    if(n < 1024*1024*1024) return (n/1024/1024).toFixed(1)+' MB';
+    return (n/1024/1024/1024).toFixed(2)+' GB';
+  }
+  function escapeHtml(s){ return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+  /* ---------- server fallback ---------- */
+  async function processServer(sourceBytesOrUrl, sourceName, opts, isUrl){
+    // Blank = use this same site's own /process route (recommended — see Settings).
+    // Only override this if you're pointing at a different deployment.
+    const workerUrl = state.prefs.workerUrl.trim().replace(/\/$/,'');
+    setStatus('Streaming to the processing endpoint…'); setProgress(20);
+
+    const form = new FormData();
+    form.append('mode', opts.mode);
+    form.append('quality', opts.quality || '');
+    form.append('container', opts.container || '');
+    form.append('audioFmt', opts.audioFmt || '');
+    form.append('bitrate', opts.bitrate || '');
+    form.append('embedMeta', state.prefs.embedMeta ? '1':'0');
+    if(isUrl){ form.append('sourceUrl', sourceBytesOrUrl); }
+    else { form.append('file', new Blob([sourceBytesOrUrl]), sourceName); }
+
+    const res = await fetch(workerUrl + '/process', { method:'POST', body: form });
+    if(!res.ok){
+      const msg = await res.text().catch(()=>null);
+      throw new Error(msg || 'SERVER_ERROR');
+    }
+    setStatus('Downloading result…'); setProgress(80);
+    const blob = await res.blob();
+    const cd = res.headers.get('content-disposition') || '';
+    const m = /filename="?([^"]+)"?/.exec(cd);
+    const name = m ? m[1] : (baseName(sourceName) + '-kiln.' + (opts.mode==='audio'?opts.audioFmt:opts.container));
+    return { blob, name };
+  }
+
+  /* ---------- run pipeline ---------- */
+  async function run(){
+    cancelled = false;
+    showCard('proc');
+    setProgress(4);
+
+    const opts = {
+      mode: state.mode,
+      quality: document.getElementById('qualitySel').value,
+      container: document.getElementById('containerSel').value,
+      audioFmt: document.getElementById('audioFmtSel').value,
+      bitrate: document.getElementById('bitrateSel').value,
+    };
+
+    try{
+      let result;
+      if(state.tab === 'upload'){
+        const file = state.file;
+        const SIZE_LIMIT = 350 * 1024 * 1024; // heuristic: hand off big files to server fallback
+        if(file.size > SIZE_LIMIT && state.prefs.allowFallback && state.prefs.workerUrl.trim()){
+          const bytes = await file.arrayBuffer();
+          result = await processServer(bytes, file.name, opts, false);
+        } else {
+          setStatus('Reading file…');
+          const bytes = new Uint8Array(await file.arrayBuffer());
+          try{
+            result = await processLocal(bytes, file.name, opts);
+          } catch(engineErr){
+            if(engineErr.message === 'CANCELLED') throw engineErr;
+            if(state.prefs.allowFallback && state.prefs.workerUrl.trim()){
+              setStatus('Local engine unavailable — falling back to your Worker…');
+              result = await processServer(bytes, file.name, opts, false);
+            } else { throw engineErr; }
+          }
+        }
+      } else {
+        // URL tab — fetch bytes client-side first (only works if source allows CORS);
+        // otherwise fall back to server, which streams it through without disk writes.
+        setStatus('Fetching your file…'); setProgress(6);
+        try{
+          const res = await fetch(state.url, { mode:'cors' });
+          if(!res.ok) throw new Error('FETCH_FAILED');
+          const bytes = new Uint8Array(await res.arrayBuffer());
+          result = await processLocal(bytes, state.url.split('/').pop() || 'file', opts);
+        } catch(fetchErr){
+          if(state.prefs.allowFallback && state.prefs.workerUrl.trim()){
+            setStatus('Browser can\'t fetch this URL directly — routing through your Worker…');
+            result = await processServer(state.url, state.url.split('/').pop() || 'file', opts, true);
+          } else {
+            throw new Error('URL_UNREACHABLE');
+          }
+        }
+      }
+
+      if(cancelled) return;
+      setProgress(100);
+      showResult(result);
+    } catch(err){
+      if(err && err.message === 'CANCELLED'){ showCard('idle'); return; }
+      showError(err);
+      showCard('idle');
+    }
+  }
+
+  document.getElementById('goBtn').addEventListener('click', run);
+  document.getElementById('cancelBtn').addEventListener('click', ()=>{
+    cancelled = true;
+    setStatus('Cancelling…');
+  });
+  document.getElementById('resetBtn').addEventListener('click', ()=>{
+    state.file = null; state.url=''; els.fileChipHolder.innerHTML=''; els.fileInput.value=''; els.urlInput.value='';
+    updateGoBtn();
+    showCard('idle');
+  });
+
+  function showCard(which){
+    els.idleCard.style.display = which==='idle' ? 'block':'none';
+    els.procCard.style.display = which==='proc' ? 'block':'none';
+    els.okCard.style.display = which==='ok' ? 'block':'none';
+  }
+
+  function showResult(result){
+    const url = URL.createObjectURL(result.blob);
+    els.resultsHolder.innerHTML = '';
+    const item = document.createElement('div');
+    item.className = 'result-item';
+    item.innerHTML = `
+      <div class="ri-thumb">${state.mode==='audio' ? '♫' : '▶'}</div>
+      <div class="ri-meta">
+        <div class="ri-name">${escapeHtml(result.name)}</div>
+        <div class="ri-sub">${fmtBytes(result.blob.size)}</div>
+      </div>
+      <a class="ri-dl" href="${url}" download="${escapeHtml(result.name)}">Save</a>
+    `;
+    els.resultsHolder.appendChild(item);
+    showCard('ok');
+  }
+
+  function showError(err){
+    const messages = {
+      ENGINE_UNAVAILABLE: ['Engine unavailable', 'Your browser couldn\'t load the local processing engine. Try enabling a server fallback in Settings.'],
+      NO_WORKER_URL: ['No fallback configured', 'This file needs server-side help — add your Worker URL in Settings.'],
+      URL_UNREACHABLE: ['Couldn\'t reach that URL', 'The browser couldn\'t fetch it directly (likely CORS), and no fallback Worker is set.'],
+      FETCH_FAILED: ['Couldn\'t reach that URL', 'Check the link is public and correct.'],
+      SERVER_ERROR: ['Processing failed on the Worker', 'Check your Worker logs/config, or try a smaller file.'],
+    };
+    const key = err && messages[err.message] ? err.message : null;
+    const [title, body] = key ? messages[key] : ['Something went wrong', (err && err.message) ? String(err.message).slice(0,140) : 'Unexpected error — try again.'];
+    const toast = document.createElement('div');
+    toast.className = 'toast';
+    toast.innerHTML = `<span class="t-icon">⚠</span><span class="t-text"><b>${escapeHtml(title)}</b>${escapeHtml(body)}</span><button class="t-close" aria-label="Dismiss">✕</button>`;
+    toast.querySelector('.t-close').addEventListener('click', ()=> toast.remove());
+    els.toastHolder.appendChild(toast);
+    setTimeout(()=> toast.remove(), 9000);
+  }
+
+  /* ---------- settings modal ---------- */
+  const modal = document.getElementById('settingsModal');
+  function openModal(){
+    document.getElementById('themeSel').value = state.prefs.theme;
+    document.getElementById('defQuality').value = state.prefs.defQuality;
+    document.getElementById('defAudio').value = state.prefs.defAudio;
+    document.getElementById('metaToggle').checked = state.prefs.embedMeta;
+    document.getElementById('motionToggle').checked = state.prefs.reducedMotion;
+    document.getElementById('fallbackToggle').checked = state.prefs.allowFallback;
+    document.getElementById('workerUrl').value = state.prefs.workerUrl;
+    document.querySelectorAll('.swatch').forEach(s=> s.classList.toggle('selected', s.dataset.c === state.prefs.accent));
+    modal.style.display = 'flex';
+  }
+  function closeModal(){ modal.style.display = 'none'; }
+  document.getElementById('settingsBtn').addEventListener('click', openModal);
+  document.getElementById('modalClose').addEventListener('click', closeModal);
+  document.getElementById('modalCancel').addEventListener('click', closeModal);
+  modal.addEventListener('click', e=>{ if(e.target === modal) closeModal(); });
+  document.querySelectorAll('.swatch').forEach(sw=>{
+    sw.addEventListener('click', ()=>{
+      document.querySelectorAll('.swatch').forEach(s=>s.classList.remove('selected'));
+      sw.classList.add('selected');
+    });
+  });
+  document.getElementById('modalSave').addEventListener('click', ()=>{
+    state.prefs.theme = document.getElementById('themeSel').value;
+    state.prefs.accent = document.querySelector('.swatch.selected').dataset.c;
+    state.prefs.defQuality = document.getElementById('defQuality').value;
+    state.prefs.defAudio = document.getElementById('defAudio').value;
+    state.prefs.embedMeta = document.getElementById('metaToggle').checked;
+    state.prefs.reducedMotion = document.getElementById('motionToggle').checked;
+    state.prefs.allowFallback = document.getElementById('fallbackToggle').checked;
+    state.prefs.workerUrl = document.getElementById('workerUrl').value.trim();
+    savePrefs();
+    applyPrefs();
+    closeModal();
+  });
+
+  updateGoBtn();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,17 @@
+name = "kiln"
+main = "worker.js"
+compatibility_date = "2024-09-23"
+
+# Serves everything in ./public (index.html) as your static site.
+# Any request that doesn't hit /process falls through to these files.
+[assets]
+directory = "./public"
+binding = "ASSETS"
+
+# Your real transcoding backend (a server that actually has ffmpeg
+# installed). Leave unset until you have one — the site works fine
+# without it. Set with:
+#   npx wrangler secret put BACKEND_URL
+#
+# [vars]
+# BACKEND_URL = "https://your-transcode-box.example.com"   # dev-only plaintext alternative

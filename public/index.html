@@ -5,6 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Kiln — process your own media</title>
 <meta name="description" content="Transcode, extract audio, and remux files you own — entirely in your browser.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
   :root{
     --bg: #16130f;
@@ -598,10 +601,16 @@
       }
     });
     const base = 'https://cdnjs.cloudflare.com/ajax/libs/ffmpeg-core/0.12.6/umd';
-    await ffmpeg.load({
-      coreURL: base + '/ffmpeg-core.js',
-      wasmURL: base + '/ffmpeg-core.wasm',
-    });
+    const { toBlobURL } = window.FFmpegUtil || {};
+    if(!toBlobURL) throw new Error('ENGINE_UNAVAILABLE');
+    // Browsers refuse to construct a Worker directly from a cross-origin
+    // script URL, so pull the engine files down and hand ffmpeg local
+    // blob: URLs instead — this is the standard way ffmpeg.wasm is loaded.
+    const [coreURL, wasmURL] = await Promise.all([
+      toBlobURL(base + '/ffmpeg-core.js', 'text/javascript'),
+      toBlobURL(base + '/ffmpeg-core.wasm', 'application/wasm'),
+    ]);
+    await ffmpeg.load({ coreURL, wasmURL });
     ffmpegLoaded = true;
   }
 

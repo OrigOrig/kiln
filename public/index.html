@@ -10,20 +10,23 @@
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
   :root{
-    --bg: #16130f;
-    --bg-raised: #1e1a15;
-    --bg-inset: #100e0b;
-    --border: #33291d;
-    --border-soft: #241f18;
-    --text: #f2ead9;
-    --text-dim: #a89a82;
-    --text-faint: #6e6353;
-    --ember: #e07a3f;
-    --ember-bright: #ff9752;
-    --ember-dim: #7a3f22;
-    --ok: #7ea672;
-    --err: #d16a5a;
-    --radius: 10px;
+    --bg: #0d0b14;
+    --bg-raised: rgba(30, 24, 46, 0.55);
+    --bg-inset: #16111f;
+    --border: rgba(167, 139, 250, 0.18);
+    --border-soft: rgba(167, 139, 250, 0.1);
+    --text: #f3eefe;
+    --text-dim: #ab9fc4;
+    --text-faint: #6f6485;
+    --grad-1: #ff6b6b;
+    --grad-2: #a855f7;
+    --grad-3: #6366f1;
+    --ember: #a855f7;
+    --ember-bright: #c77dff;
+    --ember-dim: #3d2a5c;
+    --ok: #6ee7a7;
+    --err: #ff7a8a;
+    --radius: 14px;
     --mono: 'JetBrains Mono', ui-monospace, 'SF Mono', Consolas, monospace;
     --serif: 'Fraunces', Georgia, serif;
     --sans: 'Inter', -apple-system, sans-serif;
@@ -31,14 +34,14 @@
   }
   [data-theme="light"]{
     --bg: #f3ede0;
-    --bg-raised: #fbf7ee;
-    --bg-inset: #e9e1d0;
-    --border: #d8cbb0;
-    --border-soft: #e3d8c1;
+    --bg-raised: rgba(255,255,255,0.7);
+    --bg-inset: #ece2fb;
+    --border: rgba(124,58,237,0.18);
+    --border-soft: rgba(124,58,237,0.1);
     --text: #241d12;
     --text-dim: #6b5f48;
     --text-faint: #a0937a;
-    --ember-dim: #f0c9a8;
+    --ember-dim: #e7d6fb;
   }
   *{box-sizing:border-box; margin:0; padding:0;}
   html{color-scheme: dark;}
@@ -49,8 +52,11 @@
     font-family: var(--sans);
     min-height:100vh;
     background-image:
-      radial-gradient(ellipse 900px 500px at 50% -10%, var(--ember-dim) 0%, transparent 60%);
+      radial-gradient(ellipse 900px 520px at 18% -8%, rgba(255,107,107,.20) 0%, transparent 55%),
+      radial-gradient(ellipse 800px 500px at 88% 8%, rgba(99,102,241,.22) 0%, transparent 55%),
+      radial-gradient(ellipse 700px 500px at 50% 100%, rgba(168,85,247,.14) 0%, transparent 60%);
     background-repeat:no-repeat;
+    background-attachment: fixed;
   }
   @media (prefers-reduced-motion: reduce){ :root{ --motion: 0; } }
   *{ transition: background-color .2s ease, border-color .2s ease, color .2s ease, opacity .2s ease, transform .2s ease; }
@@ -63,12 +69,18 @@
   header{ display:flex; align-items:center; justify-content:space-between; padding: 10px 4px 40px; }
   .brand{ display:flex; align-items:center; gap:10px; }
   .brand-mark{
-    width:34px; height:34px; border-radius:8px;
-    background: linear-gradient(155deg, var(--ember-bright), var(--ember-dim));
+    width:36px; height:36px; border-radius:10px;
+    background: linear-gradient(155deg, var(--grad-1), var(--grad-2) 55%, var(--grad-3));
     display:flex; align-items:center; justify-content:center;
-    font-family:var(--serif); font-weight:600; font-size:18px; color:#1a1108;
-    box-shadow: 0 0 0 1px var(--border), 0 4px 14px -6px var(--ember);
+    font-family:var(--serif); font-weight:600; font-size:18px; color:#160f24;
+    box-shadow: 0 0 0 1px rgba(255,255,255,.08), 0 6px 20px -6px rgba(168,85,247,.7);
+    animation: glowpulse 3.5s ease-in-out infinite;
   }
+  @keyframes glowpulse{
+    0%,100%{ box-shadow: 0 0 0 1px rgba(255,255,255,.08), 0 6px 20px -6px rgba(168,85,247,.55); }
+    50%{ box-shadow: 0 0 0 1px rgba(255,255,255,.12), 0 8px 28px -4px rgba(255,107,107,.6); }
+  }
+  [data-reduced="1"] .brand-mark{ animation:none; }
   .brand-name{ font-family: var(--serif); font-size: 21px; font-weight:600; letter-spacing:-.01em; }
   .brand-tag{ font-family: var(--mono); font-size:10px; color: var(--text-faint); letter-spacing:.06em; text-transform:uppercase; margin-top:1px;}
   .header-actions{ display:flex; gap:8px; }
@@ -81,8 +93,12 @@
 
   /* Hero */
   .hero{ text-align:center; padding: 10px 0 34px; }
-  .hero h1{ font-family: var(--serif); font-size: clamp(30px, 6vw, 44px); font-weight: 600; letter-spacing:-.02em; line-height:1.08; }
-  .hero h1 em{ font-style:normal; color: var(--ember-bright); }
+  .hero h1{ font-family: var(--serif); font-size: clamp(32px, 6vw, 48px); font-weight: 600; letter-spacing:-.02em; line-height:1.08; }
+  .hero h1 em{
+    font-style:normal;
+    background: linear-gradient(100deg, var(--grad-1), var(--grad-2) 55%, var(--grad-3));
+    -webkit-background-clip: text; background-clip:text; color:transparent;
+  }
   .hero p{ color: var(--text-dim); margin-top:12px; font-size:15px; max-width: 460px; margin-inline:auto; }
 
   /* Mode switch */
@@ -92,12 +108,16 @@
     padding:8px 16px; border-radius: 999px; border:1px solid var(--border);
     background: var(--bg-raised); color: var(--text-dim); cursor:pointer;
   }
-  .mode-btn.active{ background: var(--ember); border-color: var(--ember); color:#1a1108; font-weight:600; }
+  .mode-btn.active{ background: linear-gradient(100deg, var(--grad-1), var(--grad-2) 55%, var(--grad-3)); border-color: transparent; color:#160f24; font-weight:600; }
 
   /* Input card */
   .drop-card{
-    background: var(--bg-raised); border:1px solid var(--border); border-radius: var(--radius);
-    padding: 22px; margin-bottom:14px;
+    background: var(--bg-raised);
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+    border:1px solid var(--border); border-radius: var(--radius);
+    padding: 24px; margin-bottom:14px;
+    box-shadow: 0 20px 60px -30px rgba(99,102,241,.35), inset 0 1px 0 rgba(255,255,255,.04);
   }
   .tab-row{ display:flex; gap:4px; background: var(--bg-inset); padding:4px; border-radius:8px; margin-bottom:16px; }
   .tab-btn{
@@ -142,13 +162,13 @@
   .opt select:focus{ border-color: var(--ember); }
 
   .go-btn{
-    width:100%; margin-top:18px; padding:14px; border-radius:8px; border:none;
-    background: linear-gradient(155deg, var(--ember-bright), var(--ember)); color:#1a1108;
+    width:100%; margin-top:18px; padding:15px; border-radius:10px; border:none;
+    background: linear-gradient(100deg, var(--grad-1), var(--grad-2) 55%, var(--grad-3)); color:#160f24;
     font-weight:700; font-size:14.5px; letter-spacing:.01em; cursor:pointer;
-    box-shadow: 0 6px 20px -8px var(--ember);
+    box-shadow: 0 10px 30px -10px rgba(168,85,247,.6);
   }
-  .go-btn:disabled{ opacity:.4; cursor:not-allowed; box-shadow:none; }
-  .go-btn:not(:disabled):hover{ filter:brightness(1.06); }
+  .go-btn:disabled{ opacity:.35; cursor:not-allowed; box-shadow:none; }
+  .go-btn:not(:disabled):hover{ transform: translateY(-1px); box-shadow: 0 14px 36px -8px rgba(168,85,247,.75); }
 
   /* Processing state */
   .proc-card{ text-align:center; padding: 34px 22px; }
@@ -177,7 +197,7 @@
   .result-item .ri-meta{ flex:1; min-width:0; }
   .result-item .ri-name{ font-size:13px; font-family:var(--mono); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   .result-item .ri-sub{ font-size:11.5px; color:var(--text-faint); margin-top:2px; }
-  .result-item .ri-dl{ background: var(--ember); color:#1a1108; border:none; border-radius:6px; padding:7px 12px; font-size:12px; font-weight:700; cursor:pointer; flex-shrink:0; text-decoration:none; }
+  .result-item .ri-dl{ background: linear-gradient(100deg, var(--grad-1), var(--grad-2)); color:#160f24; border:none; border-radius:6px; padding:7px 12px; font-size:12px; font-weight:700; cursor:pointer; flex-shrink:0; text-decoration:none; }
   .reset-link{ display:block; text-align:center; margin-top:16px; color:var(--text-faint); font-size:12.5px; cursor:pointer; background:none; border:none; width:100%; }
   .reset-link:hover{ color: var(--text); }
 
@@ -382,11 +402,11 @@
     <div class="field">
       <label>Accent color</label>
       <div class="swatches" id="swatches">
-        <div class="swatch selected" data-c="#e07a3f" style="background:#e07a3f"></div>
-        <div class="swatch" data-c="#4f9d69" style="background:#4f9d69"></div>
-        <div class="swatch" data-c="#4a86c5" style="background:#4a86c5"></div>
-        <div class="swatch" data-c="#b25fc9" style="background:#b25fc9"></div>
-        <div class="swatch" data-c="#c9515b" style="background:#c9515b"></div>
+        <div class="swatch selected" data-c="#a855f7" style="background:#a855f7"></div>
+        <div class="swatch" data-c="#ff6b6b" style="background:#ff6b6b"></div>
+        <div class="swatch" data-c="#6366f1" style="background:#6366f1"></div>
+        <div class="swatch" data-c="#22d3ee" style="background:#22d3ee"></div>
+        <div class="swatch" data-c="#f472b6" style="background:#f472b6"></div>
       </div>
     </div>
 
@@ -448,8 +468,6 @@
   </div>
 </div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/ffmpeg/0.12.10/umd/ffmpeg.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/ffmpeg-util/0.12.1/umd/index.min.js"></script>
 <script>
 (function(){
   'use strict';
@@ -492,7 +510,7 @@
   }
   function defaultPrefs(){
     return {
-      theme:'dark', accent:'#e07a3f', defQuality:'1080', defAudio:'mp3',
+      theme:'dark', accent:'#a855f7', defQuality:'1080', defAudio:'mp3',
       embedMeta:true, reducedMotion:false, allowFallback:true, workerUrl:''
     };
   }
@@ -592,26 +610,30 @@
   async function ensureEngine(onProgress){
     if(ffmpegLoaded) return;
     onProgress('Loading engine…', 4);
-    const { FFmpeg } = window.FFmpegWASM || {};
-    if(!FFmpeg) throw new Error('ENGINE_UNAVAILABLE');
-    ffmpeg = new FFmpeg();
-    ffmpeg.on('progress', ({progress}) => {
-      if(progress && progress>0 && progress<=1){
-        setProgress(10 + Math.round(progress*80));
-      }
-    });
-    const base = 'https://cdnjs.cloudflare.com/ajax/libs/ffmpeg-core/0.12.6/umd';
-    const { toBlobURL } = window.FFmpegUtil || {};
-    if(!toBlobURL) throw new Error('ENGINE_UNAVAILABLE');
-    // Browsers refuse to construct a Worker directly from a cross-origin
-    // script URL, so pull the engine files down and hand ffmpeg local
-    // blob: URLs instead — this is the standard way ffmpeg.wasm is loaded.
-    const [coreURL, wasmURL] = await Promise.all([
-      toBlobURL(base + '/ffmpeg-core.js', 'text/javascript'),
-      toBlobURL(base + '/ffmpeg-core.wasm', 'application/wasm'),
-    ]);
-    await ffmpeg.load({ coreURL, wasmURL });
-    ffmpegLoaded = true;
+    try{
+      const ffmpegMod = await import('https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/esm/index.js');
+      const utilMod = await import('https://cdn.jsdelivr.net/npm/@ffmpeg/util@0.12.1/dist/esm/index.js');
+      const { FFmpeg } = ffmpegMod;
+      const { toBlobURL } = utilMod;
+
+      ffmpeg = new FFmpeg();
+      ffmpeg.on('progress', ({progress}) => {
+        if(progress && progress>0 && progress<=1){
+          setProgress(10 + Math.round(progress*80));
+        }
+      });
+
+      const coreBase = 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.6/dist/esm';
+      const [coreURL, wasmURL, classWorkerURL] = await Promise.all([
+        toBlobURL(coreBase + '/ffmpeg-core.js', 'text/javascript'),
+        toBlobURL(coreBase + '/ffmpeg-core.wasm', 'application/wasm'),
+        toBlobURL('https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/esm/worker.js', 'text/javascript'),
+      ]);
+      await ffmpeg.load({ coreURL, wasmURL, classWorkerURL });
+      ffmpegLoaded = true;
+    } catch(e){
+      throw new Error('ENGINE_UNAVAILABLE');
+    }
   }
 
   function setStatus(text){ els.procStatus.textContent = text; }
